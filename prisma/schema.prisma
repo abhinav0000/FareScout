@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SeatType {
+  ANY
+  SEATER
+  SLEEPER
+}
+
+enum BusType {
+  ANY
+  AC
+  NON_AC
+}
+
+enum TripStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum Recommendation {
+  BOOK_NOW
+  WAIT
+}
+
+model TelegramUser {
+  id             String        @id
+  telegramId     BigInt        @unique
+  username       String?
+  firstName      String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  trackedTrips   TrackedTrip[]
+}
+
+model TrackedTrip {
+  id                 String           @id @default(cuid())
+  userId             String
+  user               TelegramUser     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceCity         String
+  destinationCity    String
+  normalizedSource   String
+  normalizedDest     String
+  journeyDate        DateTime
+  seatType           SeatType         @default(ANY)
+  busType            BusType          @default(ANY)
+  departureWindow    String?
+  preferredOperator  String?
+  status             TripStatus       @default(ACTIVE)
+  nextCollectionAt   DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  snapshots          FareSnapshot[]
+  forecasts          Forecast[]
+
+  @@index([status, nextCollectionAt])
+  @@index([normalizedSource, normalizedDest, journeyDate])
+}
+
+model FareSnapshot {
+  id               String      @id @default(cuid())
+  tripId           String
+  trip             TrackedTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  provider         String
+  lowestFarePaise  Int
+  medianFarePaise  Int
+  busCount         Int
+  availableSeats   Int
+  operatorName     String?
+  observedAt       DateTime    @default(now())
+  hoursToDeparture Float
+  raw              Json?
+
+  @@index([tripId, observedAt])
+}
+
+model Forecast {
+  id                       String         @id @default(cuid())
+  tripId                   String
+  trip                     TrackedTrip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  currentFarePaise         Int
+  predictedLowestFarePaise Int
+  expectedBestWindow       String
+  confidence               Float
+  recommendation           Recommendation
+  reasoning                String
+  createdAt                DateTime       @default(now())
+
+  @@index([tripId, createdAt])
+}
