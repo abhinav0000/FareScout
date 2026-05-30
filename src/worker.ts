@@ -19,7 +19,17 @@ const worker = new Worker<{ tripId: string }>(
 );
 
 worker.on("failed", (job, error) => {
-  logger.error({ jobId: job?.id, error }, "fare collection failed");
+  logger.error(
+    {
+      jobId: job?.id,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      }
+    },
+    "fare collection failed"
+  );
 });
 
 logger.info("fare collection worker started");

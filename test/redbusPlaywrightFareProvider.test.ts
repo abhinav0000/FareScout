@@ -7,7 +7,7 @@ describe("buildRedbusSearchUrl", () => {
     const url = buildRedbusSearchUrl({
       sourceCity: "Mumbai",
       destinationCity: "Pune",
-      journeyDate: new Date("2026-06-12T00:00:00.000+05:30"),
+      journeyDate: new Date(Date.UTC(2026, 5, 12, 12, 0, 0, 0)),
       seatType: SeatType.SLEEPER,
       busType: BusType.AC
     });
@@ -16,5 +16,6 @@ describe("buildRedbusSearchUrl", () => {
     expect(url).toContain("fromCityName=Mumbai");
     expect(url).toContain("toCityName=Pune");
     expect(url).toContain("onward=12-Jun-2026");
+    expect(url).toContain("doj=12-Jun-2026");
   });
 });

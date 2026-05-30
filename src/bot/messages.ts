@@ -1,4 +1,5 @@
 import type { ForecastResult } from "../domain/types.js";
+import { formatDateOnly } from "../domain/dateOnly.js";
 import { formatRupees } from "../domain/normalize.js";
 
 type TrackedTripMessage = {
@@ -30,7 +31,7 @@ export function tripCreatedMessage(trip: TrackedTripMessage): string {
     "Tracking started.",
     `Trip ID: ${trip.id}`,
     `${trip.sourceCity} -> ${trip.destinationCity}`,
-    `Journey date: ${trip.journeyDate.toISOString().slice(0, 10)}`,
+    `Journey date: ${formatDateOnly(trip.journeyDate)}`,
     `Preference: ${trip.seatType}, ${trip.busType}`,
     "I will check fares every 4-6 hours and forecast the best booking window."
   ].join("\n");

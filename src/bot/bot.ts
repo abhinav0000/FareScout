@@ -1,4 +1,5 @@
 import { Bot, Context, InputFile } from "grammy";
+import { formatDateOnly } from "../domain/dateOnly.js";
 import { TripStatus } from "../domain/enums.js";
 import { config } from "../config.js";
 import { prisma } from "../db.js";
@@ -55,7 +56,7 @@ export function createBot(): Bot {
 
     await ctx.reply(
       trips
-        .map((trip: { id: string; sourceCity: string; destinationCity: string; journeyDate: Date }) => `${trip.id}: ${trip.sourceCity} -> ${trip.destinationCity} on ${trip.journeyDate.toISOString().slice(0, 10)}`)
+        .map((trip: { id: string; sourceCity: string; destinationCity: string; journeyDate: Date }) => `${trip.id}: ${trip.sourceCity} -> ${trip.destinationCity} on ${formatDateOnly(trip.journeyDate)}`)
         .join("\n")
     );
   });

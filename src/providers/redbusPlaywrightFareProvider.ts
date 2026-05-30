@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { chromium, type Browser, type Page } from "playwright";
+import { formatRedbusDate } from "../domain/dateOnly.js";
 import { BusType, SeatType } from "../domain/enums.js";
 import type { FareOption, FareSearchResult, TripSearch } from "../domain/types.js";
 import { config } from "../config.js";
@@ -61,11 +61,12 @@ export class RedbusPlaywrightFareProvider implements FareProvider {
 export function buildRedbusSearchUrl(search: TripSearch): string {
   const source = slugCity(search.sourceCity);
   const destination = slugCity(search.destinationCity);
-  const onward = format(search.journeyDate, "dd-MMM-yyyy");
+  const onward = formatRedbusDate(search.journeyDate);
   const url = new URL(`https://www.redbus.in/bus-tickets/${source}-to-${destination}`);
   url.searchParams.set("fromCityName", search.sourceCity);
   url.searchParams.set("toCityName", search.destinationCity);
   url.searchParams.set("onward", onward);
+  url.searchParams.set("doj", onward);
   url.searchParams.set("busType", "Any");
   return url.toString();
 }

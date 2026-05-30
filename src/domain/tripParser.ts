@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseDateOnly, startOfTodayDateOnly } from "./dateOnly.js";
 import { BusType, SeatType } from "./enums.js";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -26,9 +27,9 @@ export function parseTrackCommand(text: string, now = new Date()): ParsedTrackCo
 
   const [sourceCity, destinationCity, dateToken, seatToken = "any", busToken = "any", windowToken, ...operatorParts] = tokens;
   const date = dateSchema.parse(dateToken);
-  const journeyDate = new Date(`${date}T00:00:00.000+05:30`);
+  const journeyDate = parseDateOnly(date);
 
-  if (Number.isNaN(journeyDate.getTime()) || journeyDate < startOfToday(now)) {
+  if (Number.isNaN(journeyDate.getTime()) || journeyDate < startOfTodayDateOnly(now)) {
     throw new Error("Journey date must be today or later in YYYY-MM-DD format.");
   }
 
@@ -74,8 +75,4 @@ function parseBusType(value: string): BusType {
     default:
       throw new Error("Bus type must be one of: any, ac, non_ac.");
   }
-}
-
-function startOfToday(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
