@@ -95,4 +95,13 @@ npm.cmd run lint
 
 The default provider is a deterministic mock simulator. Replace it by implementing the `FareProvider` interface in `src/providers` once you have access to a compliant partner or B2B bus booking API.
 
+For private local experimentation, there is also a Playwright-based redBus provider:
+
+```env
+FARE_PROVIDER=redbus-playwright
+REDBUS_HEADLESS=false
+```
+
+This provider opens redBus route pages, extracts visible bus cards, and converts them into fare options. It does not log in, book tickets, handle payments, or bypass CAPTCHA/blocking.
+
 Avoid broad scraping for public launch unless legal and platform terms have been reviewed.
