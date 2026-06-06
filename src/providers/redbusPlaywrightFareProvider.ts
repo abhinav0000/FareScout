@@ -4,6 +4,7 @@ import { BusType, SeatType } from "../domain/enums.js";
 import type { FareOption, FareSearchResult, TripSearch } from "../domain/types.js";
 import { config } from "../config.js";
 import type { FareProvider } from "./fareProvider.js";
+import { resolveRedbusCity, type RedbusCity } from "./redbusCityMap.js";
 
 type ExtractedBus = {
   operatorName?: string;
@@ -33,8 +34,10 @@ export class RedbusPlaywrightFareProvider implements FareProvider {
 
       page.setDefaultTimeout(config.REDBUS_TIMEOUT_MS);
       const url = buildRedbusSearchUrl(search);
+      const expectedDate = formatRedbusDate(search.journeyDate);
       await openSearchPage(page, url);
       await dismissPopups(page);
+      await assertExpectedJourneyDate(page, expectedDate);
       await page.waitForTimeout(2500);
 
       const extracted = await extractBusCards(page);
@@ -59,25 +62,25 @@ export class RedbusPlaywrightFareProvider implements FareProvider {
 }
 
 export function buildRedbusSearchUrl(search: TripSearch): string {
-  const source = slugCity(search.sourceCity);
-  const destination = slugCity(search.destinationCity);
+  const source = resolveRedbusCity(search.sourceCity);
+  const destination = resolveRedbusCity(search.destinationCity);
   const onward = formatRedbusDate(search.journeyDate);
-  const url = new URL(`https://www.redbus.in/bus-tickets/${source}-to-${destination}`);
-  url.searchParams.set("fromCityName", search.sourceCity);
-  url.searchParams.set("toCityName", search.destinationCity);
+  const url = new URL("https://www.redbus.in/search");
+  setCitySearchParams(url, "from", source);
+  url.searchParams.set("srcCountry", source.country);
+  setCitySearchParams(url, "to", destination);
+  url.searchParams.set("destCountry", destination.country);
   url.searchParams.set("onward", onward);
   url.searchParams.set("doj", onward);
-  url.searchParams.set("busType", "Any");
+  url.searchParams.set("ref", "modifySearch");
   return url.toString();
 }
 
-function slugCity(city: string): string {
-  return city
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+function setCitySearchParams(url: URL, direction: "from" | "to", city: RedbusCity): void {
+  const prefix = direction === "from" ? "fromCity" : "toCity";
+  url.searchParams.set(`${prefix}Name`, city.name);
+  url.searchParams.set(`${prefix}Id`, city.id);
+  url.searchParams.set(`${prefix}Type`, city.type);
 }
 
 async function openSearchPage(page: Page, url: string): Promise<void> {
@@ -117,6 +120,27 @@ async function dismissPopups(page: Page): Promise<void> {
     if (await closeButton.isVisible().catch(() => false)) {
       await closeButton.click().catch(() => undefined);
     }
+  }
+}
+
+async function assertExpectedJourneyDate(page: Page, expectedDate: string): Promise<void> {
+  const finalUrl = page.url();
+  const parsedUrl = new URL(finalUrl);
+  const urlDates = [parsedUrl.searchParams.get("onward"), parsedUrl.searchParams.get("doj")].filter(Boolean);
+
+  if (urlDates.length > 0 && !urlDates.includes(expectedDate)) {
+    throw new Error(`redBus changed the journey date. Expected ${expectedDate}, final URL: ${finalUrl}`);
+  }
+
+  const bodyText = await page.locator("body").innerText({ timeout: 10_000 }).catch(() => "");
+  const visibleDateMatch = bodyText.match(/\b\d{1,2}\s+[A-Z][a-z]{2},\s+\d{4}\b/);
+  if (!visibleDateMatch) {
+    return;
+  }
+
+  const expectedVisibleDate = expectedDate.replace(/^0/, "").replace(/-/g, " ").replace(/(\w{3}) (\d{4})$/, "$1, $2");
+  if (visibleDateMatch[0] !== expectedVisibleDate) {
+    throw new Error(`redBus changed the visible journey date. Expected ${expectedVisibleDate}, saw ${visibleDateMatch[0]}, final URL: ${finalUrl}`);
   }
 }
 
